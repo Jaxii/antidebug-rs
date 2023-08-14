@@ -3,6 +3,9 @@ extern crate winapi;
 mod debug;
 
 fn main() {
+
+    debug::create_debugger_hidden_thread();
+
     match debug::check_heap() {
         Ok(result) => println!("Check heap for debugger: {}", result),
         Err(e) => println!("Error: {}", e),
@@ -20,5 +23,8 @@ fn main() {
 
     println!("Check kernel debug object: {}", debug::query_kernel_debug_object());
 
-    debug::create_debugger_hidden_thread();
+    println!("Check NtGlobalFlagPeb: {}", debug::adbg_nt_global_flag_peb());
+
+    println!("Check adbg peb: {}", debug::adbg_being_debugged_peb());
+    
 }

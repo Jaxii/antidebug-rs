@@ -5,12 +5,24 @@ use winapi::shared::ntdef::{NTSTATUS, PVOID, HANDLE, PULONG, BOOLEAN};
 use winapi::um::heapapi::{GetProcessHeap, HeapWalk};
 use winapi::um::minwinbase::PROCESS_HEAP_ENTRY;
 
+use std::ptr;
+use winapi::shared::minwindef::BOOL;
+use winapi::shared::windef::HWND;
+use winapi::um::debugapi::{CheckRemoteDebuggerPresent, IsDebuggerPresent};
+use winapi::um::handleapi::CloseHandle;
+use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use winapi::um::tlhelp32::CreateToolhelp32Snapshot;
+use winapi::um::tlhelp32::Process32FirstW;
+use winapi::um::tlhelp32::Process32NextW;
+use winapi::um::tlhelp32::PROCESSENTRY32W;
+use winapi::um::tlhelp32::TH32CS_SNAPPROCESS;
+
+use winapi::um::winuser::FindWindowW;
 use std::thread;
-use winapi::um::debugapi::IsDebuggerPresent;
+
 use winapi::um::winuser::{GetShellWindow, GetWindowThreadProcessId};
-use winapi::um::processthreadsapi::GetCurrentProcess;
-use winapi::um::debugapi::CheckRemoteDebuggerPresent;
-use winapi::shared::ntdef::ULONG;
+
+
 use winapi::um::memoryapi::{VirtualAlloc, VirtualFree, VirtualProtect};
 use winapi::um::sysinfoapi::{GetSystemInfo, SYSTEM_INFO};
 use winapi::um::winnt::{MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_EXECUTE_READWRITE, PAGE_GUARD};
@@ -27,9 +39,9 @@ use winapi::um::debugapi::ContinueDebugEvent;
 use winapi::um::debugapi::DebugActiveProcess;
 use winapi::um::debugapi::WaitForDebugEvent;
 
-
+use winapi::shared::minwindef::ULONG;
 use winapi::um::winnt::DBG_CONTINUE;
-use winapi::um::processthreadsapi::{GetCurrentThread, GetThreadContext};
+use winapi::um::processthreadsapi::{GetCurrentThread, GetThreadContext, GetCurrentProcess};
 use winapi::um::winnt::CONTEXT;
 
 use winapi::um::winnt::CONTEXT_DEBUG_REGISTERS;
@@ -115,7 +127,6 @@ pub fn check_debugger_present() -> bool {
 }
 
 pub fn check_remote_debugger_present() -> bool {
-    let mut b_debugger_present: i32 = 0;
     let mut b_debugger_present: i32 = 0; // Using i32 instead of BOOL since BOOL is typedef to i32 in winapi.
     unsafe {
         CheckRemoteDebuggerPresent(GetCurrentProcess(), &mut b_debugger_present) != 0
@@ -126,12 +137,12 @@ pub fn check_remote_debugger_present() -> bool {
 pub fn create_debugger_hidden_thread() {
     let handler = thread::spawn(|| {
         // thread code
-        const ThreadHideFromDebugger: u32 = 0x11; //todo: verify this value
+        const THREAD_HIDE_FROM_DEBUGGER: u32 = 0x11; //todo: verify this value
 
-        let status = unsafe {
+        let _status = unsafe {
             NtSetInformationThread(
-                NtCurrentThread,
-                ThreadHideFromDebugger,
+                NT_CURRENT_THREAD,
+                THREAD_HIDE_FROM_DEBUGGER,
                 std::ptr::null_mut(),
                 0,
             )
@@ -160,11 +171,10 @@ pub fn check_kuser_shared_data_structure() -> bool {
     (b & 0x01 != 0) || (b & 0x02 != 0)
 }
 
-
 pub fn check_kernel_debugger() -> bool {
     let mut system_info = SystemKernelDebuggerInformation {
-        DebuggerEnabled: 0,
-        DebuggerNotPresent: 0,
+        debugger_enabled: 0,
+        debugger_not_present: 0,
     };
     let status: NTSTATUS = unsafe {
         NtQuerySystemInformation(
@@ -175,7 +185,7 @@ pub fn check_kernel_debugger() -> bool {
         )
     };
 
-    status == STATUS_SUCCESS && system_info.DebuggerEnabled != 0 && system_info.DebuggerNotPresent == 0
+    status == STATUS_SUCCESS && system_info.debugger_enabled != 0 && system_info.debugger_not_present == 0
 }
 
 pub fn query_kernel_debug_object() -> bool {
@@ -194,7 +204,7 @@ pub fn query_kernel_debug_object() -> bool {
             let status: NTSTATUS = unsafe {
                 pfn_nt_query_information_process(
                     GetCurrentProcess(),
-                    ProcessDebugPort,
+                    PROCESS_DEBUG_PORT,
                     &mut dw_process_debug_port as *mut _ as PVOID,
                     std::mem::size_of::<DWORD>() as ULONG,
                     &mut dw_returned,
@@ -208,6 +218,67 @@ pub fn query_kernel_debug_object() -> bool {
 }
 
 
+pub fn new_anti_dbg_test() -> bool {
+    return false;
+}
+
+
+pub fn adbg_being_debugged_peb() -> bool {
+    let mut found: BOOL = 0;
+
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        asm!(
+          "xor rax, rax",
+          "mov rax, gs:[60h]",
+          "mov rax, [rax + 02h]",
+          "and rax, 0FFh",
+          "mov {found}, rax",
+          found = out(reg) found
+        );
+
+        #[cfg(not(target_arch = "x86_64"))]
+        asm!(
+          "xor eax, eax",
+          "mov eax, fs:[0x30]",
+          "mov eax, [eax + 0x02]",
+          "and eax, 0xFF",
+          "mov {found}, eax",
+          found = out(reg) found
+        );
+    }
+
+    return found != 0
+}
+
+pub fn adbg_nt_global_flag_peb() -> bool {
+    let mut found: BOOL = 0;
+
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        asm!(
+          "xor rax, rax",
+          "mov rax, gs:[60h]",
+          "mov rax, [rax + 0BCh]",
+          "and rax, 70h",
+          "mov {found}, rax",
+          found = out(reg) found
+        );
+
+        #[cfg(not(target_arch = "x86_64"))]
+        asm!(
+          "xor eax, eax",
+          "mov eax, fs: [0x30]",
+          "mov eax, [eax + 0x68]",
+          "and eax, 0x00000070"
+          "mov {found}, eax",
+          found = out(reg) found
+        );
+    }
+
+    return found != 0
+}
+
 extern "C" {
     fn NtSetInformationThread(
         ThreadHandle: winapi::um::winnt::HANDLE,
@@ -217,13 +288,13 @@ extern "C" {
     ) -> winapi::shared::ntdef::NTSTATUS;
 }
 
-const NtCurrentThread: winapi::um::winnt::HANDLE = -2i32 as *mut winapi::ctypes::c_void;
+const NT_CURRENT_THREAD: winapi::um::winnt::HANDLE = -2i32 as *mut winapi::ctypes::c_void;
 const SYSTEM_KERNEL_DEBUGGER_INFORMATION: ULONG = 0x23;
 
 #[repr(C)]
 struct SystemKernelDebuggerInformation {
-    DebuggerEnabled: BOOLEAN,
-    DebuggerNotPresent: BOOLEAN,
+    debugger_enabled: BOOLEAN,
+    debugger_not_present: BOOLEAN,
 }
 
 extern "system" {
@@ -235,8 +306,7 @@ extern "system" {
     ) -> NTSTATUS;
 }
 
-const ProcessDebugPort: ULONG = 7;
-
+const PROCESS_DEBUG_PORT: ULONG = 7;
 
 type TNtQueryInformationProcess = unsafe extern "system" fn(
     ProcessHandle: HANDLE,
