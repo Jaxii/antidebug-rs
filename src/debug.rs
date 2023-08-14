@@ -279,6 +279,8 @@ pub fn adbg_nt_global_flag_peb() -> bool {
     return found != 0
 }
 
+
+
 extern "C" {
     fn NtSetInformationThread(
         ThreadHandle: winapi::um::winnt::HANDLE,

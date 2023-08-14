@@ -1,6 +1,7 @@
 extern crate winapi;
 
 mod debug;
+mod bsod;
 
 fn main() {
 
@@ -27,4 +28,6 @@ fn main() {
 
     println!("Check adbg peb: {}", debug::adbg_being_debugged_peb());
     
+    bsod::zw_bsod();
+
 }
