@@ -1,0 +1,2 @@
+[build]
+rustflags = ["--remap-path-prefix", "C:\\Users\\jax="] # This will remove any occurrence of C:\Users\YourUser in the resulting binary.
