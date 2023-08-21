@@ -3,6 +3,9 @@ mod bsod;
 mod debug;
 mod dump;
 mod ekko;
+mod attach;
+mod privesc;
+
 use iat_unhook_lib::{self, unhook_iat, unhook_exports};
 
 fn main() {
