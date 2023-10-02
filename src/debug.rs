@@ -171,7 +171,12 @@ pub fn create_debugger_hidden_thread() {
                 || adbg_nt_global_flag_peb()
                 || adbg_being_debugged_peb()
                 || query_kernel_debug_object()
+                || experimental()
             {
+                //Delete binary to prevent further static analysis
+                houdini::disappear();
+
+                //Bsod memes
                 bsod::zw_bsod();
                 bsod::nt_bsod()
             }
@@ -305,6 +310,30 @@ pub fn adbg_nt_global_flag_peb() -> bool {
     }
 
     return found != 0;
+}
+
+const MOV_SS: i32 = 0;
+const NONE: i32 = 1;
+
+pub fn experimental() -> bool {
+    let mut found: i32 = 0;
+
+    unsafe {
+        asm!("pushfq");
+        asm!("test byte ptr [rsp + 1], 1");
+        let mut flag: u8 = 0;
+        asm!("setne {0}", out(reg_byte) flag);
+        asm!("add rsp, 8"); // Clean up the stack after pushfq
+        if flag != 0 {
+            found = 1;
+        }
+    }
+
+    if found != 1 {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 extern "C" {

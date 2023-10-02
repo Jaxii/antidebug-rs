@@ -10,10 +10,11 @@ edition = "2021"
 anyhow = "1.0.75"
 houdini = "2.0.0"
 obfstr = "0.4.3"
-winapi = { version = "0.3.9", features = ["heapapi", "winnt", "debugapi", "processthreadsapi", "winuser", "memoryapi", "sysinfoapi", "minwindef", "ntdef", "libloaderapi", "tlhelp32", "handleapi"] }
+winapi = { version = "0.3.9", features = ["heapapi", "winnt", "debugapi", "processthreadsapi", "winuser", "memoryapi", "sysinfoapi", "minwindef", "ntdef", "libloaderapi", "tlhelp32", "handleapi", "winbase", "securitybaseapi", "wincon", "errhandlingapi", "processenv", "combaseapi", "winerror", "psapi"] }
 winreg = "0.50.0"
 ntapi = "0.4.1"
 iat_unhook = { path = "iat_unhook" }
+encrust = "0.1.1"
 
 [dependencies.windows-sys]
 version = "0.45.0"

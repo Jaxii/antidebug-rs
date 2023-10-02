@@ -12,7 +12,7 @@ fn erase_pe_header_from_memory() {
     if !p_base_addr.is_null() {
         // Change memory protection
         let mut old_protect = 0;
-        let page_size: usize = 4096; // Assume x86 page size
+        let page_size: usize = 4096; // Assumes x86 page size. todo: GetModuleInformation
         let success = unsafe {
             VirtualProtect(
                 p_base_addr as *mut _,
@@ -28,7 +28,6 @@ fn erase_pe_header_from_memory() {
                 std::ptr::write_bytes(p_base_addr, 0, page_size);
             }
         }
-
     }
 }
 

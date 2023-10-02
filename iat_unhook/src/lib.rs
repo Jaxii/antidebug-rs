@@ -19,7 +19,8 @@ pub fn unhook_exports() -> bool {
     };
     let ntdll_start = ntdll.get_base_address() as u64;
     let ntdll_end = ntdll_start + ntdll.get_size() as u64;
-    let addr_list = pe_helper::get_export_table(&ntdll).expect(obfstr::obfstr!("Failed to get export table"));
+    let addr_list =
+        pe_helper::get_export_table(&ntdll).expect(obfstr::obfstr!("Failed to get export table"));
     let addr_list_clone = addr_list.clone();
     for addr in addr_list {
         //println!("Checking addr for hooks: {:#x}", addr);
@@ -38,11 +39,12 @@ pub fn unhook_iat() -> bool {
         Ok(base_address) => base_address,
         Err(_) => return false,
     };
-    let kernelbase_address = match pe_helper::get_module_by_name(obfstr::obfstr!("kernelbase.dll")) {
+    let kernelbase_address = match pe_helper::get_module_by_name(obfstr::obfstr!("kernelbase.dll"))
+    {
         Some(kernelbase_address) => kernelbase_address,
         None => return false,
     };
-   
+
     // Get a parsed PE file from the base address.
     let pe_file = match pe_helper::get_module_by_address(base_address.0 as usize) {
         Some(pe_file) => pe_file,
@@ -51,19 +53,13 @@ pub fn unhook_iat() -> bool {
 
     let res = match unpatch_iat_hooks(&pe_file) {
         Ok(res) => res,
-        Err(e) => {
-            
-            false
-        }
+        Err(e) => false,
     };
 
     //println!(obfstr::obfstr!("Unpatching kernelbase.dll"));
     let res2 = match unpatch_iat_hooks(&kernelbase_address) {
         Ok(res) => res,
-        Err(e) => {
-          
-            false
-        }
+        Err(e) => false,
     };
 
     return res | res2;

@@ -136,7 +136,9 @@ fn get_vprotect_addr(
 ) -> extern "system" fn(isize, *mut u64, usize, u64, *mut u32) -> i64 {
     // Get the address of ntdll
     let ntdll = get_module_by_name(obfstr::obfstr!("ntdll.dll")).unwrap();
-    let target_addr = ntdll.get_export_addr_from_name(obfstr::obfstr!("ZwProtectVirtualMemory")).unwrap();
+    let target_addr = ntdll
+        .get_export_addr_from_name(obfstr::obfstr!("ZwProtectVirtualMemory"))
+        .unwrap();
     let mut target_addr_ptr: usize = 0;
     let _res = unhook_iat_entry(
         None,
