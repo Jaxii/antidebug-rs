@@ -1,5 +1,7 @@
 # antidebug-rs
 
+A collection of anti-debugging techniques ported to Rust
+
 # Credits
 
 https://github.com/Kudaes/DInvoke_rs
