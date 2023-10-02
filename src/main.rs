@@ -10,7 +10,7 @@ use iat_unhook_lib::{self, unhook_exports, unhook_iat};
 
 fn main() {
     //test
-    util::test_get_currentprocess_modules();
+    //util::test_get_currentprocess_modules();
 
     //Run unhooking:
     unhook_iat();
